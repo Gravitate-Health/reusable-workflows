@@ -39,9 +39,9 @@ jobs:
     steps:
       - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ github.event.repository.name }}."
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: echo "🔎 The name of your image is  ${{ steps.setup-environment.outputs.image }}."
-      - run: echo "🔎 The name of your foo is ${{ steps.setup-environment.outputs.foo }}."
-      - run: echo "🔎 The name of your environment is ${{ steps.setup-environment.outputs.environment }}."
+      - run: echo "🔎 The name of your image is  ${{ needs.setup-environment.outputs.image }}."
+      - run: echo "🔎 The name of your foo is ${{ needs.setup-environment.outputs.foo }}."
+      - run: echo "🔎 The name of your environment is ${{ needs.setup-environment.outputs.environment }}."
 
 #  test:
 #    env:
