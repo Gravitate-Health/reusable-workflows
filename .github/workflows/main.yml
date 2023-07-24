@@ -2,7 +2,7 @@ name: Main CI/CD pipeline
 
 on:
   workflow_call:
-    inputs:
+    #inputs:
       #image_name:
       #  required: true
       #  type: string
