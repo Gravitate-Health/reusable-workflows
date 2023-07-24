@@ -85,7 +85,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: ${{ env.IMAGE }}:latest
+          tags: ${{ env.IMAGE }}:dev
       - name: Build and Push image to registry - prod
         uses: docker/build-push-action@v4
         if: ${{ env.ENVIRONMENT == 'prod' }}
