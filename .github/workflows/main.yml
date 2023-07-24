@@ -21,33 +21,25 @@ jobs:
       - id: setup-environment
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "::set-output name=environment::=prod"
+            echo "environment=prod">> $GITHUB_ENV
             echo "FOO=bar" >> $GITHUB_ENV
           else
-            echo "::set-output name=environment::=dev"
+            echo "environment=dev">> $GITHUB_ENV
           fi
 
-          echo "::set-output name=image::${REGISTRY_URL}/${REPO_NAME}}"
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-      environment: ${{ steps.environment.outputs.environment }}
+          echo "image=${env.REGISTRY_URL}/${env.REPO_NAME}}" >> $GITHUB_ENV
+    #outputs:
+    #  image: ${{ env.REGISTRY_URL }}/${{ github.event.repository.name}}
+    #  environment: ${{ steps.environment.outputs.environment }}
 
 
   debug:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🔎 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ github.event.repository.name }}."
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ env.ENVIRONMENT }}."
-      
-      - run: echo "🎉 output image ${{ needs.setup-environment.outputs.image }}."
-      - run: echo "🎉 output environment ${{ needs.setup-environment.outputs.environment }}."
-      - run: echo "🎉 variable REPO_NAME ${{ env.REPO_NAME }}."
-      - run: echo "🎉 variable REGISTRY_URL ${{ env.REGISTRY_URL }}."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
+      - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ env.environment }}."
+      - run: echo "🔎 The name of your image is ${{ env.image }}."
 
   test:
     env:
