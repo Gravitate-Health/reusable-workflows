@@ -2,6 +2,10 @@ name: Main CI/CD pipeline
 
 on:
   workflow_call:
+    inputs:
+      IMAGE_NAME:
+        required: true
+        type: string
     secrets:
       REGISTRY_USERNAME:
         required: true
@@ -31,7 +35,7 @@ jobs:
 
           echo "image=${{ env.REGISTRY_URL }}/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
     outputs:
-      image: ${{ steps.setup-environment.outputs.image }}
+      image: ${{ inputs.IMAGE_NAME }}
       environment: ${{ steps.setup-environment.outputs.environment }}
 
   semantic-versioning-dry-run:
