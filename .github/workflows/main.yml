@@ -9,7 +9,6 @@ on:
         required: true
 
 env:
-  REPO_NAME: ${{ github.event.repository.name }}
   REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
 concurrency: production
 
@@ -17,6 +16,10 @@ jobs:
   setup-environment:
     runs-on: ubuntu-latest
     steps:
+      - id: string # Lowercase repo name
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ github.event.repository.name }}
       - id: setup-environment
         run: |
           echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}, with name ${{ github.event.repository.name }}"
@@ -26,7 +29,7 @@ jobs:
             echo "environment=dev">> $GITHUB_OUTPUT
           fi
 
-          echo "image=${{ env.REGISTRY_URL }}/${{ env.REPO_NAME }}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY_URL }}/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
     outputs:
       image: ${{ steps.setup-environment.outputs.image }}
       environment: ${{ steps.setup-environment.outputs.environment }}
