@@ -15,24 +15,18 @@ env:
 concurrency: production
 
 jobs:
-  rebug:
+  debug:
     runs-on: ubuntu-latest
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       - name: List files in the repository
         run: |
           ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
   setup-environment:
     runs-on: ubuntu-latest
     steps:
-      - id: environment
+      - id: setup-environment
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]; then
             echo "::set-output name=environment::=prod"
@@ -40,9 +34,9 @@ jobs:
           else
             echo "::set-output name=environment::=dev"
           fi
-      - id: image
-        run: |
-          echo "::set-output name=image::${REGISTRY_URL}/${REPO_NAME}"
+
+          echo "::set-output name=image::${REGISTRY_URL}/${{ github.event.repository.name }}"
+
     outputs:
       image: ${{ steps.image.outputs.image }}
       environment: ${{ steps.environment.outputs.environment }}
