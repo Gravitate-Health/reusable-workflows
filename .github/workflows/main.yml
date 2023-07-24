@@ -21,13 +21,13 @@ jobs:
       - id: setup-environment
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "environment=prod">> $GITHUB_ENV
+            echo "ENVIRONMENT=prod">> $GITHUB_ENV
             echo "FOO=bar" >> $GITHUB_ENV
           else
-            echo "environment=dev">> $GITHUB_ENV
+            echo "ENVIRONMENT=dev">> $GITHUB_ENV
           fi
 
-          echo "image=${env.REGISTRY_URL}/${env.REPO_NAME}}" >> $GITHUB_ENV
+          echo "IMAGE=${{ env.REGISTRY_URL }}/${{ env.REPO_NAME }}" >> $GITHUB_ENV
     #outputs:
     #  image: ${{ env.REGISTRY_URL }}/${{ github.event.repository.name}}
     #  environment: ${{ steps.environment.outputs.environment }}
@@ -38,8 +38,9 @@ jobs:
     steps:
       - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ github.event.repository.name }}."
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: echo "🔎 The name of your repo is ${REPO_NAME} or ${{ env.environment }}."
-      - run: echo "🔎 The name of your image is ${{ env.image }}."
+      - run: echo "🔎 The name of your IMAGE is  ${{ env.IMAGE }}."
+      - run: echo "🔎 The name of your FOO is ${{ env.FOO }}."
+      - run: echo "🔎 The name of your ENVIRONMENT is ${{ env.ENVIRONMENT }}."
 
   test:
     env:
