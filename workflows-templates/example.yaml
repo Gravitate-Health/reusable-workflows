@@ -1,0 +1,27 @@
+name: Example action
+
+on:
+  push:
+    branches:
+      - $default-branch
+  pull_request:
+    branches:
+      - $default-branch
+
+env:
+  REPO_NAME: ${{ github.event.repository.name }}
+concurrency: production
+
+jobs: 
+  example-job:
+    #if: ${{ github.event.act }} # Run only locally with 'act'
+    #if: ${{ !github.event.act }} # Run only in production
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Hello World
+        #if: ${{ env.ACT }} # Run only locally with 'act'
+        #if: ${{ !env.ACT }} # Run only in production
+        run: |
+          echo "$REPO_NAME" # Access to a variable
+          echo "${{ env.REPO_NAME }}" # Other way to acess to a variable

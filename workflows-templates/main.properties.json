@@ -1,0 +1,11 @@
+{
+    "name": "GH FOSPS Main Workflow",
+    "description": "GH FOSPS CI Main build and tag.",
+    "iconName": "octoicon container",
+    "categories": [
+        "Docker"
+    ],
+    "filePatterns": [
+        "^Dockerfile"
+    ]
+}
