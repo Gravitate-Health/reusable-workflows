@@ -1,13 +1,14 @@
 name: Main CI/CD pipeline
 
 on:
-  push:
-    branches:
-      - "*"
-  pull_request:
-    branches:
-    - $default-branch
-
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      new_tag:
+        required: true
+        type: string
 env:
   REPO_NAME: ${{ github.event.repository.name }}
   REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
