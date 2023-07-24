@@ -19,7 +19,7 @@ jobs:
     steps:
       - id: setup-environment
         run: |
-          echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+          echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}, with name ${{ github.event.repository.name }}"
           if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]]; then
             echo "environment=prod">> $GITHUB_OUTPUT
           else
@@ -32,6 +32,7 @@ jobs:
       environment: ${{ steps.setup-environment.outputs.environment }}
 
   semantic-versioning-dry-run:
+    needs: [setup-environment]
     if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod' }}
     runs-on: ubuntu-latest
     steps:
