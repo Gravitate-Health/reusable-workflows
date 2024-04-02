@@ -2,6 +2,11 @@ name: GH Build pipeline
 
 on:
   workflow_call:
+    secrets:
+      REGISTRY_TOKEN:
+        required: true
+      REGISTRY_USERNAME:
+        required: true
 
 env:
   REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
