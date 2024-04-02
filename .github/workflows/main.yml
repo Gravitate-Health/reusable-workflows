@@ -1,16 +1,7 @@
-name: Main CI/CD pipeline
+name: GH Build pipeline
 
 on:
   workflow_call:
-    inputs:
-      IMAGE_NAME:
-        required: true
-        type: string
-    secrets:
-      REGISTRY_USERNAME:
-        required: true
-      REGISTRY_TOKEN:
-        required: true
 
 env:
   REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
@@ -35,7 +26,7 @@ jobs:
 
           echo "image=${{ env.REGISTRY_URL }}/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
     outputs:
-      image: ${{ inputs.IMAGE_NAME }}
+      image: ${{ steps.setup-environment.outputs.image }}
       environment: ${{ steps.setup-environment.outputs.environment }}
 
   semantic-versioning-dry-run:
@@ -138,7 +129,7 @@ jobs:
           path: ./*-scanning-report.html
   semantic-versioning:
     runs-on: ubuntu-latest
-    if: ${{ needs.setup-environment.outputs.environment == 'prod'}}
+    if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
     needs: docker
     steps:
       - id: checkout
