@@ -7,6 +7,8 @@ on:
         required: true
       REGISTRY_USERNAME:
         required: true
+      KUBECONFIG_DEV:
+        required: true
 
 env:
   REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
