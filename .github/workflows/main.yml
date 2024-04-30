@@ -160,6 +160,11 @@ jobs:
         uses: azure/setup-kubectl@v1
         with:
           version: 'latest'
+      - name: Set up context
+        uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
 
       #- name: Check for changes in YAML files
       #  run: |
@@ -174,7 +179,5 @@ jobs:
 
       - name: Restart Deployment
         run: |
-            echo "$KUBE_CONFIG_DATA" | base64 --decode > kubeconfig
-            export KUBECONFIG=$(pwd)/kubeconfig
             echo " Restarting deployment ${{ github.event.repository.name }} in development environment"
             kubectl rollout restart deployment ${{ github.event.repository.name }}
