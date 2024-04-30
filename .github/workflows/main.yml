@@ -150,7 +150,6 @@ jobs:
 
   deployment-dev:
     runs-on: ubuntu-latest
-    if: ${{ needs.setup-environment.outputs.environment == 'dev'}}
     needs: [docker, setup-environment]
     steps:
       - name: Checkout repository
