@@ -150,6 +150,7 @@ jobs:
 
   deployment-dev:
     runs-on: ubuntu-latest
+    if: always()
     needs: [docker, setup-environment]
     steps:
       - name: Checkout repository
