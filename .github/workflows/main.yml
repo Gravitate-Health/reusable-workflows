@@ -99,7 +99,7 @@ jobs:
   security-scan-trivy:
     runs-on: ubuntu-latest
     if: ${{ needs.setup-environment.outputs.environment == 'prod'}}
-    needs: [setup-environment, docker]
+    needs: [setup-environment, docker, semantic-versioning-dry-run]
     env:
       TAG: ${{ needs.semantic-versioning-dry-run.outputs.new-tag || 'latest' }}
       IMAGE: ${{ needs.setup-environment.outputs.image }}
@@ -137,7 +137,7 @@ jobs:
   semantic-versioning:
     runs-on: ubuntu-latest
     if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
-    needs: docker
+    needs: [docker, setup-environment]
     steps:
       - id: checkout
         uses: actions/checkout@v2
@@ -151,7 +151,7 @@ jobs:
   deployment-dev:
     runs-on: ubuntu-latest
     if: ${{ needs.setup-environment.outputs.environment == 'dev'}}
-    needs: docker
+    needs: [docker, setup-environment]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -159,7 +159,7 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v1
         with:
-          kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
+          version: 'latest'
 
       #- name: Check for changes in YAML files
       #  run: |
