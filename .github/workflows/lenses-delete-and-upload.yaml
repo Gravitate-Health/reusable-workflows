@@ -1,10 +1,12 @@
 name: Lens publishing to server
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+  workflow_call:
+    secrets:
+      DELETE_LENS_URL:
+        required: true
+      FHIR_SERVER_URL:
+        required: true
 jobs:
   publish-lens:
     runs-on: ubuntu-latest

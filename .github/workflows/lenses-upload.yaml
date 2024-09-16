@@ -1,8 +1,12 @@
 name: Lens publishing to server
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
+  workflow_call:
+    secrets:
+      DELETE_LENS_URL:
+        required: true
+      FHIR_SERVER_URL:
+        required: true
 
 jobs:
   publish-lens:
