@@ -1,8 +1,6 @@
 name: Lens publishing to server
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
   push:
     branches:
@@ -19,5 +17,7 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install -g @gravitate-health/fhir-lens-bundler
+      - name: Delete existing lens (if exists)
+        run: curl -X DELETE ${{secrets.DELETE_LENS_URL}}/${{github.env.repository.name}}
       - name: Upload lens
         run: fhir-lens-bundler upload ${{github.env.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
