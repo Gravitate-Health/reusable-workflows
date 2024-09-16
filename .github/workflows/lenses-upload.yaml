@@ -21,5 +21,5 @@ jobs:
       - name: Install dependencies
         run: npm install -g @gravitate-health/fhir-lens-bundler
       - name: Upload lens
-        run: fhir-lens-bundler upload ${{github.env.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
  

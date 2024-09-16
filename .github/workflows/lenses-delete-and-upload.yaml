@@ -22,4 +22,4 @@ jobs:
       - name: Delete existing lens (if exists)
         run: curl -X DELETE ${{secrets.DELETE_LENS_URL}}${{github.env.repository.name}}
       - name: Upload lens
-        run: fhir-lens-bundler upload ${{github.env.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
