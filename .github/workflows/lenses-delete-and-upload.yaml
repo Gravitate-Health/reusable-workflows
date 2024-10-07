@@ -2,18 +2,12 @@ name: Lens publishing to server
 
 on:
   workflow_call:
-    secrets:
-      DELETE_LENS_URL:
-        required: true
-      FHIR_SERVER_URL:
-        required: true
-      DELETE_LENS_URL_PROD:
-        required: true
-      FHIR_SERVER_URL_PROD:
-        required: true
+
 env:
-  DELETE_LENS_URL: ${{secrets.DELETE_LENS_URL}}
-  FHIR_SERVER_URL: ${{secrets.FHIR_SERVER_URL}}
+  FHIR_SERVER_URL_DEV: ***REMOVED_SECRET_URL***
+  FHIR_SERVER_URL_PROD: ***REMOVED_SECRET_URL***
+  DELETE_LENS_URL_DEV: ***REMOVED_SECRET_URL***/Library?name:exact=
+  DELETE_LENS_URL_PROD: ***REMOVED_SECRET_URL***/Library?name:exact=
 jobs:
   publish-lens:
     runs-on: ubuntu-latest
@@ -26,14 +20,10 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install -g @gravitate-health/fhir-lens-bundler
-      - name: Setup dev urls
-        run: |
-          echo "DELETE_LENS_URL=${{secrets.DELETE_LENS_URL}}" >> $GITHUB_ENV
-          echo "FHIR_SERVER_URL=${{secrets.FHIR_SERVER_URL}}" >> $GITHUB_ENV
       - name: Delete existing lens (if exists)
-        run: curl -X DELETE ${{env.DELETE_LENS_URL}}${{github.env.repository.name}}
+        run: curl -X DELETE ${{env.DELETE_LENS_URL_DEV}}${{github.env.repository.name}}
       - name: Upload lens
-        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL }}
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL_DEV }}
   publish-lens-prod:
     runs-on: ubuntu-latest
     steps:
@@ -45,12 +35,7 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install -g @gravitate-health/fhir-lens-bundler
-      - name: Setup prod urls
-        run: |
-          echo "DELETE_LENS_URL=${{secrets.DELETE_LENS_URL_PROD}}" >> $GITHUB_ENV
-          echo "FHIR_SERVER_URL=${{secrets.FHIR_SERVER_URL_PROD}}" >> $GITHUB_ENV
-
       - name: Delete existing lens (if exists)
-        run: curl -X DELETE ${{env.DELETE_LENS_URL}}${{github.env.repository.name}}
+        run: curl -X DELETE ${{env.FHIR_SERVER_URL_PROD}}${{github.env.repository.name}}
       - name: Upload lens
-        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL }}
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL_PROD }}
