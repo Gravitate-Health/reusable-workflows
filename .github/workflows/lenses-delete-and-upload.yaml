@@ -7,6 +7,13 @@ on:
         required: true
       FHIR_SERVER_URL:
         required: true
+      DELETE_LENS_URL_PROD:
+        required: true
+      FHIR_SERVER_URL_PROD:
+        required: true
+env:
+  DELETE_LENS_URL: ${{secrets.DELETE_LENS_URL}}
+  FHIR_SERVER_URL: ${{secrets.FHIR_SERVER_URL}}
 jobs:
   publish-lens:
     runs-on: ubuntu-latest
@@ -19,7 +26,31 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install -g @gravitate-health/fhir-lens-bundler
+      - name: Setup dev urls
+        run: |
+          echo "DELETE_LENS_URL=${{secrets.DELETE_LENS_URL}}" >> $GITHUB_ENV
+          echo "FHIR_SERVER_URL=${{secrets.FHIR_SERVER_URL}}" >> $GITHUB_ENV
       - name: Delete existing lens (if exists)
-        run: curl -X DELETE ${{secrets.DELETE_LENS_URL}}${{github.env.repository.name}}
+        run: curl -X DELETE ${{env.DELETE_LENS_URL}}${{github.env.repository.name}}
       - name: Upload lens
-        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ secrets.FHIR_SERVER_URL }}
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL }}
+  publish-lens-prod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install -g @gravitate-health/fhir-lens-bundler
+      - name: Setup prod urls
+        run: |
+          echo "DELETE_LENS_URL=${{secrets.DELETE_LENS_URL_PROD}}" >> $GITHUB_ENV
+          echo "FHIR_SERVER_URL=${{secrets.FHIR_SERVER_URL_PROD}}" >> $GITHUB_ENV
+
+      - name: Delete existing lens (if exists)
+        run: curl -X DELETE ${{env.DELETE_LENS_URL}}${{github.env.repository.name}}
+      - name: Upload lens
+        run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL }}
