@@ -2,6 +2,11 @@ name: Lens publishing to server
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+        description: 'The tag of the release'
 
 env:
   FHIR_SERVER_URL_DEV: ***REMOVED_SECRET_URL***
@@ -27,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: "refs/tags/${{ github.event.inputs.tag }}"
+          ref: "refs/tags/${{ inputs.tag }}"
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
