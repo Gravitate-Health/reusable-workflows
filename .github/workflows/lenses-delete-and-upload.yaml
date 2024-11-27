@@ -2,6 +2,10 @@ name: Lens publishing to server
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
 
 env:
   FHIR_SERVER_URL_DEV: ***REMOVED_SECRET_URL***
@@ -9,6 +13,29 @@ env:
   DELETE_LENS_URL_DEV: ***REMOVED_SECRET_URL***/Library?name:exact=
   DELETE_LENS_URL_PROD: ***REMOVED_SECRET_URL***/Library?name:exact=
 jobs:
+  semantic-versioning-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+      - name: Minor version for each merge
+        id: taggerDryRun
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DRY_RUN: true
+      - name: Print tags
+        run: |
+          echo "New tag is: ${{ steps.taggerDryRun.outputs.new_tag }}"
+          echo "Current tag is: ${{ steps.taggerDryRun.outputs.tag }}"
+          echo "Increment type is: ${{ steps.taggerDryRun.outputs.part }}"
+    outputs:
+      new-tag: ${{ steps.taggerDryRun.outputs.new_tag }}
+      current-tag: ${{ steps.taggerDryRun.outputs.tag }}
+      increment-type: ${{ steps.taggerDryRun.outputs.part }}
   publish-lens:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          ref: "refs/tags/${{ github.event.inputs.tag }}"
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
