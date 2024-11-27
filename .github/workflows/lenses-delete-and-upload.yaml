@@ -38,6 +38,7 @@ jobs:
       current-tag: ${{ steps.taggerDryRun.outputs.tag }}
       increment-type: ${{ steps.taggerDryRun.outputs.part }}
   publish-lens:
+    needs: semantic-versioning-dry-run
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,6 +54,7 @@ jobs:
       - name: Upload lens
         run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL_DEV }}
   publish-lens-prod:
+    needs: semantic-versioning-dry-run
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
