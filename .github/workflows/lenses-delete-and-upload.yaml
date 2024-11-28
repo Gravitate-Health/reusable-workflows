@@ -14,6 +14,18 @@ env:
   DELETE_LENS_URL_DEV: ***REMOVED_SECRET_URL***/Library?name:exact=
   DELETE_LENS_URL_PROD: ***REMOVED_SECRET_URL***/Library?name:exact=
 jobs:
+  semantic-versioning:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
+    steps:
+      - id: checkout
+        uses: actions/checkout@v2
+      - name: Minor version for each merge
+        id: taggerFinal
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
   semantic-versioning-dry-run:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +50,7 @@ jobs:
       current-tag: ${{ steps.taggerDryRun.outputs.tag }}
       increment-type: ${{ steps.taggerDryRun.outputs.part }}
   publish-lens:
-    needs: semantic-versioning-dry-run
+    needs: semantic-versioning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,7 +66,7 @@ jobs:
       - name: Upload lens
         run: fhir-lens-bundler upload ${{github.event.repository.name}}.json -d ${{ env.FHIR_SERVER_URL_DEV }}
   publish-lens-prod:
-    needs: semantic-versioning-dry-run
+    needs: semantic-versioning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
