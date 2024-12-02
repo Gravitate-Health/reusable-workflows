@@ -16,7 +16,6 @@ env:
 jobs:
   semantic-versioning:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
     steps:
       - id: checkout
         uses: actions/checkout@v2
@@ -28,6 +27,7 @@ jobs:
           WITH_V: true
   semantic-versioning-dry-run:
     runs-on: ubuntu-latest
+    needs: publish-lens
     steps:
       - id: checkout
         uses: actions/checkout@v2
