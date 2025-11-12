@@ -115,7 +115,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ needs.setup-environment.outputs.lowercase }}:${{ env.TAG }}
+          tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ env.TAG }}
 
   security-scan-trivy:
     runs-on: ubuntu-latest
