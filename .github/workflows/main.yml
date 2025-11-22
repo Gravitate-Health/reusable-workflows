@@ -29,18 +29,38 @@ jobs:
       - id: setup-environment
         run: |
           echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}, with name ${{ github.event.repository.name }}"
+          # determine environment (prod vs dev)
           if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]]; then
             echo "environment=prod">> $GITHUB_OUTPUT
           else
             echo "environment=dev">> $GITHUB_OUTPUT
           fi
 
+          # compute image base name
           echo "image=${{ env.REGISTRY_URL }}/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
           echo "lowercase=${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
+
+          # derive branch name and sanitized tag
+          BRANCH_REF="${GITHUB_REF#refs/heads/}"
+          BRANCH_NAME="${BRANCH_REF}"
+          # sanitize: lowercase, replace invalid chars with '-', collapse multiples, trim edges
+          SANITIZED=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | sed -E 's/^-+|-+$//g' | sed -E 's/-+/-/g')
+          if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
+            TAG_VALUE="latest"
+          else
+            TAG_VALUE="$SANITIZED"
+          fi
+
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "branch-sanitized=${SANITIZED}" >> $GITHUB_OUTPUT
+          echo "branch-tag=${TAG_VALUE}" >> $GITHUB_OUTPUT
     outputs:
       image: ${{ steps.setup-environment.outputs.image }}
       environment: ${{ steps.setup-environment.outputs.environment }}
       lowercase: ${{ steps.setup-environment.outputs.lowercase }}
+      branch: ${{ steps.setup-environment.outputs.branch }}
+      branch-sanitized: ${{ steps.setup-environment.outputs.branch-sanitized }}
+      branch-tag: ${{ steps.setup-environment.outputs.branch-tag }}
 
   semantic-versioning-dry-run:
     needs: [setup-environment]
@@ -73,8 +93,9 @@ jobs:
     if: always()
     env:
       ENVIRONMENT: ${{ needs.setup-environment.outputs.environment || 'dev' }}
-      TAG: ${{ needs.semantic-versioning-dry-run.outputs.new-tag || 'latest' }}
       IMAGE: ${{ needs.setup-environment.outputs.image }}
+      BRANCH_TAG: ${{ needs.setup-environment.outputs.branch-tag }}
+      SEMVER_TAG: ${{ needs.semantic-versioning-dry-run.outputs.new-tag || '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,14 +129,14 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE }}:latest , ${{ env.IMAGE }}:${{ env.TAG }}
+          tags: ${{ env.IMAGE }}:${{ needs.semantic-versioning-dry-run.outputs.new-tag }} , ${{ env.IMAGE }}:${{ needs.setup-environment.outputs.branch-tag }}
       - name: Build and Push image to GHCR
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ env.TAG }} , ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:latest
+          tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.semantic-versioning-dry-run.outputs.new-tag }} , ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.setup-environment.outputs.branch-tag}}
 
   security-scan-trivy:
     runs-on: ubuntu-latest
