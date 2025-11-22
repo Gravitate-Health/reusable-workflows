@@ -151,55 +151,22 @@ jobs:
           ./trivy image --cache-dir .trivycache/ --scanners config --no-progress --severity HIGH,CRITICAL --format template --template "@contrib/html.tpl" -o misconfigurations-scanning-report.html ${{ env.IMAGE }}:${{ env.TAG }}
       - name: Upload artifacts from trivy scanning
         if: ${{ !env.ACT }} # Run only in production
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-vuln-report
           path: ./*-scanning-report.html
           
-  semantic-versioning:
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
-    needs: [docker, setup-environment]
-    steps:
-      - id: checkout
-        uses: actions/checkout@v2
-      - name: Minor version for each merge
-        id: taggerFinal
-        uses: anothrNick/github-tag-action@1.36.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
+  # semantic-versioning:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
+  #   needs: [docker, setup-environment]
+  #   steps:
+  #     - id: checkout
+  #       uses: actions/checkout@v2
+  #     - name: Minor version for each merge
+  #       id: taggerFinal
+  #       uses: anothrNick/github-tag-action@1.36.0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         WITH_V: true
 
-  deployment-dev:
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [docker, setup-environment]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v1
-        with:
-          version: 'latest'
-      - name: Set up context
-        uses: azure/k8s-set-context@v1
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
-
-      #- name: Check for changes in YAML files
-      #  run: |
-      #    # Script to detect changes in YAML files
-      #    # Example: kubectl apply --dry-run=client -o yaml -f <path-to-yaml>
-      #    kubectl apply --validate=false --dry-run=client -o yaml -k kubernetes/dev
-
-      #- name: Apply Kubernetes manifests
-      #  run: |
-      #    # Apply YAML files if changes detected
-      #    # Example: kubectl apply -f path/to/your/manifests
-
-      - name: Restart Deployment
-        run: |
-            echo " Restarting deployment ${{ github.event.repository.name }} in development environment"
-            kubectl rollout restart deployment ${{ github.event.repository.name }}
