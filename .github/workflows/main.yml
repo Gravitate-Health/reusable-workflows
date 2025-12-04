@@ -122,6 +122,7 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: ${{ env.IMAGE }}:dev
+          platforms: linux/amd64,linux/arm64
       - name: Build and Push image to registry - prod
         uses: docker/build-push-action@v4
         if: ${{ env.ENVIRONMENT == 'prod' }}
@@ -138,6 +139,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.semantic-versioning-dry-run.outputs.new-tag }}
+          platforms: linux/amd64,linux/arm64
       - name: Build and Push image to GHCR - all branches
         uses: docker/build-push-action@v4
         with:
@@ -145,6 +147,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.setup-environment.outputs.branch-tag}}
+          platforms: linux/amd64,linux/arm64
 
   security-scan-trivy:
     runs-on: ubuntu-latest
