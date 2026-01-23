@@ -1,0 +1,60 @@
+name: "Publish Helm Chart to GHCR"
+
+on:
+  workflow_call:
+    inputs:
+      chart_path:
+        description: "Path to the Chart.yaml directory (e.g. charts/my-service)"
+        required: true
+        type: string
+      registry_namespace:
+        description: "The namespace in GHCR to push to (defaults to 'charts')"
+        required: false
+        default: "charts"
+        type: string
+
+permissions:
+  contents: read
+  packages: write  # Required to push to GHCR
+
+jobs:
+  publish:
+    name: Package and Push Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package Helm Chart
+        id: package
+        run: |
+          # Package the chart, this creates a .tgz file in the current folder
+          helm package ${{ inputs.chart_path }} --destination .
+          
+          # Extract the name of the created package for logging
+          PACKAGE_NAME=$(ls *.tgz)
+          echo "Created package: $PACKAGE_NAME"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Push to OCI Registry
+        run: |
+          PACKAGE_NAME="${{ steps.package.outputs.package_name }}"
+          ORG_NAME="${{ github.repository_owner }}"
+          NAMESPACE="${{ inputs.registry_namespace }}"
+          
+          # This pushes to oci://ghcr.io/ORG/NAMESPACE
+          # Resulting artifact: ghcr.io/org/charts/chart-name:version
+          
+          helm push $PACKAGE_NAME oci://ghcr.io/$ORG_NAME/$NAMESPACE
