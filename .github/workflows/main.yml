@@ -3,10 +3,6 @@ name: GH Build pipeline
 on:
   workflow_call:
     secrets:
-      REGISTRY_TOKEN:
-        required: true
-      REGISTRY_USERNAME:
-        required: true
       KUBECONFIG_DEV:
         required: true
 
@@ -14,8 +10,6 @@ permissions:
   contents: read
   packages: write
 
-env:
-  REGISTRY_URL: gravitate-registry.cr.de-fra.ionos.com
 concurrency: production
 
 jobs:
@@ -37,7 +31,7 @@ jobs:
           fi
 
           # compute image base name
-          echo "image=${{ env.REGISTRY_URL }}/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
+          echo "image=ghcr.io/gravitate-health/${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
           echo "lowercase=${{ steps.string.outputs.lowercase }}" >> $GITHUB_OUTPUT
 
           # derive branch name and sanitized tag
@@ -106,31 +100,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Login to Production registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY_URL }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build - dev
+      - name: Build and Push - dev
         uses: docker/build-push-action@v4
         if: ${{ env.ENVIRONMENT != 'prod' }}
         with:
           context: .
           file: ./Dockerfile
-          push: false
+          push: true
           tags: ${{ env.IMAGE }}:dev
           platforms: linux/amd64,linux/arm64
-      - name: Build and Push image to registry - prod
-        uses: docker/build-push-action@v4
-        if: ${{ env.ENVIRONMENT == 'prod' }}
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE }}:${{ needs.semantic-versioning-dry-run.outputs.new-tag }} , ${{ env.IMAGE }}:${{ needs.setup-environment.outputs.branch-tag }}
       - name: Build and Push image to GHCR - prod
         if: ${{ env.ENVIRONMENT == 'prod' }}
         uses: docker/build-push-action@v4
@@ -159,12 +139,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Login to GH registry
-        uses: docker/login-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY_URL }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Trivy security scans local
         if: ${{ env.ACT }} # Run only locally
         run: |
