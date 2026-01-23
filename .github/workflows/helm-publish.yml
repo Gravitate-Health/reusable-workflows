@@ -6,6 +6,7 @@ on:
       chart_path:
         description: "Path to the Chart.yaml directory (e.g. charts/my-service)"
         required: true
+        default: ${{ github.event.repository.name }}
         type: string
       registry_namespace:
         description: "The namespace in GHCR to push to (defaults to 'charts')"
