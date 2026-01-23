@@ -2,9 +2,6 @@ name: GH Build pipeline
 
 on:
   workflow_call:
-    secrets:
-      KUBECONFIG_DEV:
-        required: true
 
 permissions:
   contents: read
@@ -52,19 +49,16 @@ jobs:
       image: ${{ steps.setup-environment.outputs.image }}
       environment: ${{ steps.setup-environment.outputs.environment }}
       lowercase: ${{ steps.setup-environment.outputs.lowercase }}
-      branch: ${{ steps.setup-environment.outputs.branch }}
-      branch-sanitized: ${{ steps.setup-environment.outputs.branch-sanitized }}
       branch-tag: ${{ steps.setup-environment.outputs.branch-tag }}
 
   semantic-versioning-dry-run:
     needs: [setup-environment]
-    if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod' }}
+    if: needs.setup-environment.outputs.environment == 'prod'
     runs-on: ubuntu-latest
     steps:
-      - id: checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: "0"
+          fetch-depth: 0
       - name: Minor version for each merge
         id: taggerDryRun
         uses: anothrNick/github-tag-action@1.75.0
@@ -75,12 +69,8 @@ jobs:
       - name: Print tags
         run: |
           echo "New tag is: ${{ steps.taggerDryRun.outputs.new_tag }}"
-          echo "Current tag is: ${{ steps.taggerDryRun.outputs.tag }}"
-          echo "Increment type is: ${{ steps.taggerDryRun.outputs.part }}"
     outputs:
       new-tag: ${{ steps.taggerDryRun.outputs.new_tag }}
-      current-tag: ${{ steps.taggerDryRun.outputs.tag }}
-      increment-type: ${{ steps.taggerDryRun.outputs.part }}
 
   docker:
     needs: [setup-environment, semantic-versioning-dry-run]
@@ -88,8 +78,6 @@ jobs:
     env:
       ENVIRONMENT: ${{ needs.setup-environment.outputs.environment || 'dev' }}
       IMAGE: ${{ needs.setup-environment.outputs.image }}
-      BRANCH_TAG: ${{ needs.setup-environment.outputs.branch-tag }}
-      SEMVER_TAG: ${{ needs.semantic-versioning-dry-run.outputs.new-tag || '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -102,36 +90,20 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build and Push - dev
-        uses: docker/build-push-action@v4
-        if: ${{ env.ENVIRONMENT != 'prod' }}
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE }}:dev
-          platforms: linux/amd64,linux/arm64
-      - name: Build and Push image to GHCR - prod
-        if: ${{ env.ENVIRONMENT == 'prod' }}
+      - name: Build and Push image to GHCR
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.semantic-versioning-dry-run.outputs.new-tag }}
-          platforms: linux/amd64,linux/arm64
-      - name: Build and Push image to GHCR - all branches
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}:${{ needs.setup-environment.outputs.branch-tag}}
+          tags: |
+            ${{ env.IMAGE }}:${{ needs.setup-environment.outputs.branch-tag }}
+            ${{ env.ENVIRONMENT == 'prod' && format('{0}:{1}', env.IMAGE, needs.semantic-versioning-dry-run.outputs.new-tag) || '' }}
           platforms: linux/amd64,linux/arm64
 
   security-scan-trivy:
     runs-on: ubuntu-latest
-    if: ${{ needs.setup-environment.outputs.environment == 'prod'}}
+    if: needs.setup-environment.outputs.environment == 'prod'
     needs: [setup-environment, docker, semantic-versioning-dry-run]
     env:
       TAG: ${{ needs.semantic-versioning-dry-run.outputs.new-tag || 'latest' }}
@@ -146,14 +118,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Trivy security scans local
-        if: ${{ env.ACT }} # Run only locally
+        if: env.ACT # Run only locally
         run: |
           export TRIVY_VERSION=$(wget -qO - "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
           echo $TRIVY_VERSION
           wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
           ./trivy image --exit-code 0 --cache-dir .trivycache/ --no-progress --severity HIGH,CRITICAL ${{ env.IMAGE }}:${{ env.TAG }}
       - name: Trivy security scans production
-        if: ${{ !env.ACT }} # Run only in production
+        if: '!env.ACT' # Run only in production
         run: |
           export TRIVY_VERSION=$(wget -qO - "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
           echo $TRIVY_VERSION
@@ -162,23 +134,9 @@ jobs:
           ./trivy image --cache-dir .trivycache/ --scanners secret --no-progress --severity HIGH,CRITICAL --format template --template "@contrib/html.tpl" -o secrets-scanning-report.html ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}
           ./trivy image --cache-dir .trivycache/ --scanners config --no-progress --severity HIGH,CRITICAL --format template --template "@contrib/html.tpl" -o misconfigurations-scanning-report.html ghcr.io/gravitate-health/${{ needs.setup-environment.outputs.lowercase }}
       - name: Upload artifacts from trivy scanning
-        if: ${{ !env.ACT }} # Run only in production
+        if: '!env.ACT' # Run only in production
         uses: actions/upload-artifact@v4
         with:
           name: trivy-vuln-report
           path: ./*-scanning-report.html
-          
-  # semantic-versioning:
-  #   runs-on: ubuntu-latest
-  #   if: ${{ !github.event.act && needs.setup-environment.outputs.environment == 'prod'}}
-  #   needs: [docker, setup-environment]
-  #   steps:
-  #     - id: checkout
-  #       uses: actions/checkout@v2
-  #     - name: Minor version for each merge
-  #       id: taggerFinal
-  #       uses: anothrNick/github-tag-action@1.36.0
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         WITH_V: true
 
