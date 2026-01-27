@@ -102,7 +102,7 @@ jobs:
       - name: Push to OCI Registry
         run: |
           PACKAGE_NAME="${{ steps.package.outputs.package_name }}"
-          ORG_NAME="${{ github.repository_owner }}"
+          ORG_NAME="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           NAMESPACE="${{ inputs.registry_namespace }}"
           
           # This pushes to oci://ghcr.io/ORG/NAMESPACE
@@ -134,7 +134,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Chart:** ${{ inputs.chart_path }}" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${CHART_VERSION}" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry:** ghcr.io/${{ github.repository_owner }}/charts" >> $GITHUB_STEP_SUMMARY
+          ORG_NAME_LOWER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "**Registry:** ghcr.io/${ORG_NAME_LOWER}/charts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
@@ -148,12 +149,12 @@ jobs:
           echo "### Installation" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "# Install specific version" >> $GITHUB_STEP_SUMMARY
-          echo "helm install my-release oci://ghcr.io/${{ github.repository_owner }}/charts/${CHART_NAME} --version ${CHART_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "helm install my-release oci://ghcr.io/${ORG_NAME_LOWER}/charts/${CHART_NAME} --version ${CHART_VERSION}" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ steps.version.outputs.is_release }}" == "false" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "# Or install latest" >> $GITHUB_STEP_SUMMARY
-            echo "helm install my-release oci://ghcr.io/${{ github.repository_owner }}/charts/${CHART_NAME} --version latest" >> $GITHUB_STEP_SUMMARY
+            echo "helm install my-release oci://ghcr.io/${ORG_NAME_LOWER}/charts/${CHART_NAME} --version latest" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo '```' >> $GITHUB_STEP_SUMMARY
