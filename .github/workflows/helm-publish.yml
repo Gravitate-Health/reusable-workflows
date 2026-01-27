@@ -6,7 +6,7 @@ on:
       chart_path:
         description: "Path to the Chart.yaml directory (e.g. charts/my-service)"
         required: true
-        default: ${{ github.event.repository.name }}
+        default: charts/${{ github.event.repository.name }}
         type: string
       registry_namespace:
         description: "The namespace in GHCR to push to (defaults to 'charts')"
@@ -19,6 +19,28 @@ permissions:
   packages: write  # Required to push to GHCR
 
 jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint ${{ inputs.chart_path }}
+
+      - name: Template Helm Chart
+        run: |
+          helm template test-release ${{ inputs.chart_path }} > /dev/null
+          echo "✅ Chart templates successfully"
+
   publish:
     name: Package and Push Chart
     runs-on: ubuntu-latest
@@ -38,11 +60,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine Version
+        id: version
+        run: |
+          # Check if this is a tag or main branch
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract version from tag (e.g., v1.2.3 -> 1.2.3)
+            TAG_VERSION="${{ github.ref_name }}"
+            VERSION="${TAG_VERSION#v}"
+            echo "Building for tag: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            # For main branch or other branches, use chart version with -dev suffix
+            CHART_VERSION=$(helm show chart ${{ inputs.chart_path }} | grep '^version:' | awk '{print $2}')
+            VERSION="${CHART_VERSION}-dev"
+            echo "Building for branch with dev version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Package Helm Chart
         id: package
         run: |
-          # Package the chart, this creates a .tgz file in the current folder
-          helm package ${{ inputs.chart_path }} --destination .
+          # Package the chart with the determined version
+          helm package ${{ inputs.chart_path }} --destination . --version ${{ steps.version.outputs.version }}
           
           # Extract the name of the created package for logging
           PACKAGE_NAME=$(ls *.tgz)
@@ -59,3 +101,51 @@ jobs:
           # Resulting artifact: ghcr.io/org/charts/chart-name:version
           
           helm push $PACKAGE_NAME oci://ghcr.io/$ORG_NAME/$NAMESPACE
+          
+          # For main branch, also tag as 'latest'
+          if [[ "${{ steps.version.outputs.is_release }}" == "false" ]]; then
+            CHART_NAME=$(helm show chart ${{ inputs.chart_path }} | grep '^name:' | awk '{print $2}')
+            echo "Tagging as latest for main branch..."
+            
+            # Pull the chart we just pushed
+            helm pull oci://ghcr.io/$ORG_NAME/$NAMESPACE/$CHART_NAME --version ${{ steps.version.outputs.version }}
+            
+            # Re-package with 'latest' tag
+            helm package ${{ inputs.chart_path }} --destination . --version latest
+            LATEST_PACKAGE=$(ls *-latest.tgz)
+            helm push $LATEST_PACKAGE oci://ghcr.io/$ORG_NAME/$NAMESPACE
+            
+            echo "✅ Also published as 'latest'"
+          fi
+
+      - name: Chart Summary
+        run: |
+          CHART_VERSION="${{ steps.version.outputs.version }}"
+          CHART_NAME=$(helm show chart ${{ inputs.chart_path }} | grep '^name:' | awk '{print $2}')
+          echo "## Helm Chart Published 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Chart:** ${{ inputs.chart_path }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${CHART_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** ghcr.io/${{ github.repository_owner }}/charts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
+            echo "**Type:** Release (from tag)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Type:** Development (from branch)" >> $GITHUB_STEP_SUMMARY
+            echo "**Also tagged as:** latest" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Install specific version" >> $GITHUB_STEP_SUMMARY
+          echo "helm install my-release oci://ghcr.io/${{ github.repository_owner }}/charts/${CHART_NAME} --version ${CHART_VERSION}" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.version.outputs.is_release }}" == "false" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Or install latest" >> $GITHUB_STEP_SUMMARY
+            echo "helm install my-release oci://ghcr.io/${{ github.repository_owner }}/charts/${CHART_NAME} --version latest" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo '```' >> $GITHUB_STEP_SUMMARY
