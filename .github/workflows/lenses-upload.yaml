@@ -23,9 +23,9 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: npm install -g @gravitate-health/fhir-lens-bundler
+        run: npm install -g @gravitate-health/lens-tool-bundler
       - name: Upload lens
-        run: fhir-lens-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_DEV }} ./
+        run: lens-tool-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_DEV }} ./
   publish-lens-prod:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: npm install -g @gravitate-health/fhir-lens-bundler
+        run: npm install -g @gravitate-health/lens-tool-bundler
       - name: Upload lens
-        run: fhir-lens-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_PROD }} ./
+        run: lens-tool-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_PROD }} ./
  
