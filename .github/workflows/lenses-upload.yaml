@@ -17,10 +17,13 @@ on:
         type: boolean
         default: false
         description: 'Skip the testing step'
-
-env:
-  FHIR_SERVER_URL_DEV: ***REMOVED_SECRET_URL***
-  FHIR_SERVER_URL_PROD: ***REMOVED_SECRET_URL***
+    secrets:
+      FHIR_SERVER_URL_DEV:
+        required: false
+        description: 'FHIR server URL for development environment'
+      FHIR_SERVER_URL_PROD:
+        required: false
+        description: 'FHIR server URL for production environment'
 
 jobs:
   check-integrity:
@@ -70,31 +73,57 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ always() && !cancelled() && (needs.test-lenses.result == 'success' || needs.test-lenses.result == 'skipped') }}
     steps:
+      - name: Check if secret is provided
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.FHIR_SERVER_URL_DEV }}" ]; then
+            echo "ℹ️ FHIR_SERVER_URL_DEV secret not provided, skipping publish to dev"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
       - name: Checkout
+        if: steps.check_secret.outputs.skip != 'true'
         uses: actions/checkout@v4
       - name: Set up Node.js
+        if: steps.check_secret.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install dependencies
+        if: steps.check_secret.outputs.skip != 'true'
         run: npm install -g @gravitate-health/lens-tool-bundler
       - name: Upload lens
-        run: lens-tool-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_DEV }} ./
+        if: steps.check_secret.outputs.skip != 'true'
+        run: lens-tool-bundler batch-upload -d ${{ secrets.FHIR_SERVER_URL_DEV }} ./
   publish-lens-prod:
     needs: [check-integrity, test-lenses]
     runs-on: ubuntu-latest
     if: ${{ inputs.tag != '' && always() && !cancelled() && (needs.test-lenses.result == 'success' || needs.test-lenses.result == 'skipped') }}
     steps:
+      - name: Check if secret is provided
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.FHIR_SERVER_URL_PROD }}" ]; then
+            echo "ℹ️ FHIR_SERVER_URL_PROD secret not provided, skipping publish to prod"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
       - name: Checkout
+        if: steps.check_secret.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           ref: "refs/tags/${{ inputs.tag }}"
       - name: Set up Node.js
+        if: steps.check_secret.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install dependencies
+        if: steps.check_secret.outputs.skip != 'true'
         run: npm install -g @gravitate-health/lens-tool-bundler
       - name: Upload lens
-        run: lens-tool-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_PROD }} ./
+        if: steps.check_secret.outputs.skip != 'true'
+        run: lens-tool-bundler batch-upload -d ${{ secrets.FHIR_SERVER_URL_PROD }} ./
  
