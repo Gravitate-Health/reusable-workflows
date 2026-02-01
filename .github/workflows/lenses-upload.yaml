@@ -39,18 +39,18 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Install fhir-lens-bundler
-        run: npm install -g @gravitate-health/fhir-lens-bundler
+      - name: Install lens-tool-bundler
+        run: npm install -g @gravitate-health/lens-tool-bundler
       
       - name: Check lens integrity (batch)
-        run: fhir-lens-bundler batch-check || exit 1
+        run: lens-tool-bundler batch-check || exit 1
       
       - name: Report status
         if: failure()
         run: |
           echo "❌ Integrity check failed!"
           echo "One or more lens bundles are out of sync with their JavaScript files."
-          echo "Please run 'fhir-lens-bundler bundle <file> -u' to update the bundles."
+          echo "Please run 'lens-tool-bundler bundle <file> -u' to update the bundles."
           exit 1
 
   test-lenses:
