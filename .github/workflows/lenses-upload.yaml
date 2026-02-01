@@ -7,19 +7,58 @@ on:
         required: false
         type: string
         description: 'The tag of the release'
+      skip_integrity_check:
+        required: false
+        type: boolean
+        default: false
+        description: 'Skip the integrity check step'
+      skip_testing:
+        required: false
+        type: boolean
+        default: false
+        description: 'Skip the testing step'
 
 env:
   FHIR_SERVER_URL_DEV: ***REMOVED_SECRET_URL***
   FHIR_SERVER_URL_PROD: ***REMOVED_SECRET_URL***
 
 jobs:
-  test-lenses:
+  check-integrity:
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_integrity_check }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install fhir-lens-bundler
+        run: npm install -g @gravitate-health/fhir-lens-bundler
+      
+      - name: Check lens integrity (batch)
+        run: fhir-lens-bundler batch-check || exit 1
+      
+      - name: Report status
+        if: failure()
+        run: |
+          echo "❌ Integrity check failed!"
+          echo "One or more lens bundles are out of sync with their JavaScript files."
+          echo "Please run 'fhir-lens-bundler bundle <file> -u' to update the bundles."
+          exit 1
+
+  test-lenses:
+    needs: check-integrity
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_testing && (always() && !cancelled() && (needs.check-integrity.result == 'success' || needs.check-integrity.result == 'skipped')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install dependencies
@@ -27,13 +66,14 @@ jobs:
       - name: Test lens
         run: lens-tool-bundler batch-test ./
   publish-lens:
-    needs: test-lenses
+    needs: [check-integrity, test-lenses]
     runs-on: ubuntu-latest
+    if: ${{ always() && !cancelled() && (needs.test-lenses.result == 'success' || needs.test-lenses.result == 'skipped') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install dependencies
@@ -41,16 +81,16 @@ jobs:
       - name: Upload lens
         run: lens-tool-bundler batch-upload -d ${{ env.FHIR_SERVER_URL_DEV }} ./
   publish-lens-prod:
-    needs: test-lenses
+    needs: [check-integrity, test-lenses]
     runs-on: ubuntu-latest
-    if: ${{ inputs.tag != '' }}
+    if: ${{ inputs.tag != '' && always() && !cancelled() && (needs.test-lenses.result == 'success' || needs.test-lenses.result == 'skipped') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: "refs/tags/${{ inputs.tag }}"
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install dependencies
