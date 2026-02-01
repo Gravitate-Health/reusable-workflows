@@ -10,6 +10,7 @@ on:
 jobs:
   publish-helm:
     uses: Gravitate-Health/reusable-workflows/.github/workflows/helm-publish.yml@main
+    secrets: inherit  # Pass secrets from calling workflow
     permissions:
       contents: read
       packages: write
