@@ -6,7 +6,8 @@ on:
       - main
       - master
       - dev
-  pull_request:
+    tags:
+      - 'v*'
 
 jobs:
   build:
