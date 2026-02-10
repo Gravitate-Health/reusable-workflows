@@ -115,15 +115,18 @@ jobs:
             CHART_NAME=$(helm show chart ${{ inputs.chart_path }} | grep '^name:' | awk '{print $2}')
             echo "Tagging as latest for main branch..."
             
-            # Pull the chart we just pushed
-            helm pull oci://ghcr.io/$ORG_NAME/$NAMESPACE/$CHART_NAME --version ${{ steps.version.outputs.version }}
+            # Use oras or crane to copy the OCI artifact with a new tag
+            # Install oras
+            curl -LO "https://github.com/oras-project/oras/releases/download/v1.1.0/oras_1.1.0_linux_amd64.tar.gz"
+            tar -xzf oras_1.1.0_linux_amd64.tar.gz
+            chmod +x oras
             
-            # Re-package with 'latest' tag
-            helm package ${{ inputs.chart_path }} --destination . --version latest
-            LATEST_PACKAGE=$(ls *-latest.tgz)
-            helm push $LATEST_PACKAGE oci://ghcr.io/$ORG_NAME/$NAMESPACE
+            # Copy the artifact with 'latest' tag
+            SOURCE="ghcr.io/$ORG_NAME/$NAMESPACE/$CHART_NAME:${{ steps.version.outputs.version }}"
+            DEST="ghcr.io/$ORG_NAME/$NAMESPACE/$CHART_NAME:latest"
+            ./oras copy "$SOURCE" "$DEST"
             
-            echo "✅ Also published as 'latest'"
+            echo "✅ Also tagged as 'latest'"
           fi
 
       - name: Chart Summary
