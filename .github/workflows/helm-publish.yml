@@ -5,7 +5,7 @@ on:
     inputs:
       chart_path:
         description: "Path to the Chart.yaml directory (e.g. charts/my-service)"
-        required: true
+        required: false
         default: charts/${{ github.event.repository.name }}
         type: string
       registry_namespace:
